@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Function to reset user password
+reset_password() {
+    local username=$1
+    local new_password=$2
+
+    # Check if the user exists
+    if id "$username" &>/dev/null; then
+        # Check password strength (at least 8 characters, with at least one uppercase, one lowercase, one number, and one special character)
+        if [[ ${#new_password} -ge 8 && "$new_password" =~ [[:upper:]] && "$new_password" =~ [[:lower:]] && "$new_password" =~ [[:digit:]] && "$new_password" =~ [[:punct:]] ]]; then
+            echo "$username:$new_password" | sudo chpasswd
+            echo "Password for user '$username' has been reset."
+            # Log the password reset action
+            echo "$(date +"%Y-%m-%d %T"): Password for user '$username' has been reset." >> password_reset.log
+            # Optionally force password change upon next login
+            # sudo chage -d 0 "$username"
+        else
+            echo "Password does not meet the complexity requirements."
+            exit 1
+        fi
+    else
+        echo "User '$username' does not exist."
+        exit 1
+    fi
+}
+
+# Prompt for username
+read -p "Enter the username to reset password for: " username
+
+# Prompt for new password
+read -sp "Enter the new password: " new_password
+echo
+
+# Confirm the new password
+read -sp "Confirm the new password: " confirm_password
+echo
+
+# Check if the passwords match
+if [[ "$new_password" == "$confirm_password" ]]; then
+    reset_password "$username" "$new_password"
+else
+    echo "Passwords do not match. Password reset aborted."
+    exit 1
+fi
